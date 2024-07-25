@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Test</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="scanning_ble">기기연결</string>
+    <string name="start">학습시작</string>
+    <string name="reset">학습 초기화\n</string>
+    <string name="logs_will_appear_here">Logs will appear here...</string>
+    <string name="sensor_control_status">Sensor Control Status</string>
+</resources>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- SDK 31 이상에서 필요한 권한 -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        android:required="false" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:required="false" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:required="false" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:required="false" /> <!-- SDK 30 이하에서 필요한 권한 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Test"
+        tools:targetApi="31">
+        <activity
+            android:name=".ActualActivity"
+            android:exported="true" />
+        <activity
+            android:name=".RunningActivity"
+            android:exported="true" />
+        <activity
+            android:name=".WorkActivity"
+            android:exported="true" />
+        <activity
+            android:name=".ScanActivity"
+            android:exported="true" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
