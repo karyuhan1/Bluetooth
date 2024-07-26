@@ -20,4 +20,9 @@ public class NavigationService {
         activity.startActivity(intent);
         activity.finish();
     }
+
+    public static void navigateToScanActivity(Activity activity) {
+        Intent intent = new Intent(activity, ScanActivity.class);
+        activity.startActivity(intent);
+    }
 }
