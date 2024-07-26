@@ -24,7 +24,8 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK) {
-                    checkPermissionsAndNavigate(); // 블루투스 활성화 성공 시 권한 확인 및 스캔 액티비티로 이동
+                    // 블루투스 활성화 성공 시 권한 확인
+                    checkPermissions();
                 } else {
                     Toast.makeText(this, "블루투스가 활성화되지 않았습니다.", Toast.LENGTH_SHORT).show();
                 }
@@ -41,6 +42,9 @@ public class MainActivity extends AppCompatActivity {
         // 시작 버튼 클릭 리스너 설정
         Button startButton = findViewById(R.id.start_btn);
         startButton.setOnClickListener(v -> handleStartButtonClick());
+
+        // 앱이 시작될 때 권한 확인 및 요청
+        checkPermissions();
     }
 
     private void handleStartButtonClick() {
@@ -53,25 +57,50 @@ public class MainActivity extends AppCompatActivity {
                 enableBluetoothLauncher.launch(enableBtIntent);
             } else {
                 // 블루투스가 활성화된 경우, 권한 확인 및 스캔 액티비티로 이동
-                checkPermissionsAndNavigate();
+                navigateToScanActivityIfPermissionsGranted();
             }
         }
     }
 
-    private void checkPermissionsAndNavigate() {
-        PermissionHelper.checkAndRequestPermissions(this, new PermissionHelper.PermissionCallback() {
-            @Override
-            public void onPermissionsGranted() {
-                // 권한이 허용된 경우 스캔 액티비티로 이동
-                NavigationService.navigateToScanActivity(MainActivity.this);
-            }
+    private void checkPermissions() {
+        if (!PermissionHelper.hasAllBluetoothPermissions(this)) {
+            // 권한이 없는 경우 권한 요청
+            PermissionHelper.checkAndRequestPermissions(this, new PermissionHelper.PermissionCallback() {
+                @Override
+                public void onPermissionsGranted() {
+                    // 권한이 허용된 경우 아무 작업도 하지 않음
+                    Toast.makeText(MainActivity.this, "블루투스 권한이 허용되었습니다.", Toast.LENGTH_SHORT).show();
+                }
 
-            @Override
-            public void onPermissionsDenied() {
-                // 권한이 거부된 경우 토스트 메시지 표시
-                Toast.makeText(MainActivity.this, "블루투스 관련 권한이 없습니다.", Toast.LENGTH_SHORT).show();
-            }
-        });
+                @Override
+                public void onPermissionsDenied() {
+                    // 권한이 거부된 경우 토스트 메시지 표시
+                    Toast.makeText(MainActivity.this, "블루투스 관련 권한이 없습니다.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private void navigateToScanActivityIfPermissionsGranted() {
+        if (PermissionHelper.hasAllBluetoothPermissions(this)) {
+            // 권한이 모두 허용된 경우 스캔 액티비티로 이동
+            NavigationService.navigateToScanActivity(this);
+        } else {
+            // 권한이 없는 경우 권한 요청
+            PermissionHelper.checkAndRequestPermissions(this, new PermissionHelper.PermissionCallback() {
+                @Override
+                public void onPermissionsGranted() {
+                    // 권한이 허용된 경우 스캔 액티비티로 이동
+                    NavigationService.navigateToScanActivity(MainActivity.this);
+                }
+
+                @Override
+                public void onPermissionsDenied() {
+                    // 권한이 거부된 경우 토스트 메시지 표시
+                    Toast.makeText(MainActivity.this, "블루투스 관련 권한이 없습니다.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     @Override
@@ -86,8 +115,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             if (allGranted) {
-                // 모든 권한이 허용된 경우 스캔 액티비티로 이동
-                NavigationService.navigateToScanActivity(MainActivity.this);
+                // 모든 권한이 허용된 경우 블루투스 권한 허용 메시지 표시
+                Toast.makeText(this, "블루투스 권한이 허용되었습니다.", Toast.LENGTH_SHORT).show();
             } else {
                 // 권한이 거부된 경우 토스트 메시지 표시
                 Toast.makeText(this, "블루투스 관련 권한이 없습니다.", Toast.LENGTH_SHORT).show();
@@ -95,6 +124,3 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 }
-
-
-

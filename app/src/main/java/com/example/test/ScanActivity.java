@@ -10,13 +10,16 @@ import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.ParcelUuid;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.test.helper.DatabaseHelper;
@@ -36,6 +39,7 @@ public class ScanActivity extends AppCompatActivity {
     private ArrayAdapter<String> devicesAdapter;
     private DatabaseHelper dbHelper;
     private BluetoothGatt bluetoothGatt;  // BluetoothGatt 객체 선언
+    private String tag = "로그";
 
     // UUID 정의
     private static final UUID SERVICE_UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
@@ -72,12 +76,23 @@ public class ScanActivity extends AppCompatActivity {
             startScanning();
         });
 
-        // 블루투스가 활성화되어 있는지 확인하고 스캔 시작
-        if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
-            startScanning();
-        } else {
-            Toast.makeText(this, "Bluetooth is not enabled or not supported", Toast.LENGTH_SHORT).show();
-        }
+        // 권한 확인 및 요청
+        PermissionHelper.checkAndRequestPermissions(this, new PermissionHelper.PermissionCallback() {
+            @Override
+            public void onPermissionsGranted() {
+                if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
+                    startScanning();
+                } else {
+                    Toast.makeText(ScanActivity.this, "Bluetooth is not enabled or not supported", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onPermissionsDenied() {
+                Toast.makeText(ScanActivity.this, "Bluetooth permissions are required to scan devices.", Toast.LENGTH_SHORT).show();
+                NavigationService.navigateToMainActivity(ScanActivity.this);
+            }
+        });
     }
 
     // 데이터베이스 초기화
@@ -94,7 +109,7 @@ public class ScanActivity extends AppCompatActivity {
     private void startScanning() {
         Toast.makeText(this, "사용가능한 기기 검색중...", Toast.LENGTH_SHORT).show();
         try {
-            if (PermissionHelper.hasBluetoothScanPermission(this)) {
+            if (PermissionHelper.hasAllBluetoothPermissions(this)) {
                 // UUID를 사용하여 스캔 필터 설정
                 ScanFilter filter = new ScanFilter.Builder()
                         .setServiceUuid(new ParcelUuid(SERVICE_UUID))
@@ -104,10 +119,11 @@ public class ScanActivity extends AppCompatActivity {
                         .build();
                 bluetoothAdapter.getBluetoothLeScanner().startScan(List.of(filter), settings, scanCallback);
             } else {
-                throw new SecurityException("Bluetooth scan permission not granted"); // 권한이 없으면 SecurityException을 던짐
+                throw new SecurityException("Bluetooth scan permission not granted");
             }
         } catch (SecurityException e) {
-            NavigationService.navigateToMainActivity(this); // 권한이 없으면 메인 액티비티로 이동
+            Log.d(tag, "스캔시작할때 있는거");
+            NavigationService.navigateToMainActivity(this);
         }
     }
 
@@ -135,22 +151,22 @@ public class ScanActivity extends AppCompatActivity {
     private void handleScanResult(ScanResult result) {
         BluetoothDevice device = result.getDevice();
         try {
-            if (PermissionHelper.hasBluetoothConnectPermission(this) && !bluetoothDevices.contains(device)) {
+            if (PermissionHelper.hasAllBluetoothPermissions(this) && !bluetoothDevices.contains(device)) {
                 bluetoothDevices.add(device);
                 devicesAdapter.add(device.getName() + "\n" + device.getAddress());
                 devicesAdapter.notifyDataSetChanged();
             } else {
-                throw new SecurityException("Bluetooth connect permission not granted"); // 권한이 없으면 SecurityException을 던짐
+                throw new SecurityException("Bluetooth connect permission not granted");
             }
         } catch (SecurityException e) {
-            NavigationService.navigateToMainActivity(this); // 권한이 없으면 메인 액티비티로 이동
+            Log.d(tag, "결과 처리할때: 권한이 부족하여 메인 액티비티로 이동합니다. 예외: " + e.getMessage());
         }
     }
 
     // 디바이스 연결
     private void connectToDevice(BluetoothDevice device) {
         try {
-            if (PermissionHelper.hasBluetoothConnectPermission(this)) {
+            if (PermissionHelper.hasAllBluetoothPermissions(this)) {
                 Toast.makeText(this, "Connecting to " + device.getName(), Toast.LENGTH_SHORT).show();
 
                 // device_mac을 기준으로 tb_deep_learning 테이블을 조회
@@ -177,10 +193,11 @@ public class ScanActivity extends AppCompatActivity {
                     }
                 });
             } else {
-                throw new SecurityException("Bluetooth connect permission not granted"); // 권한이 없으면 SecurityException을 던짐
+                throw new SecurityException("Bluetooth connect permission not granted");
             }
         } catch (SecurityException e) {
-            NavigationService.navigateToMainActivity(this); // 권한이 없으면 메인 액티비티로 이동
+            Log.d(tag, "연결 성공때");
+            NavigationService.navigateToMainActivity(this);
         }
     }
 
@@ -197,8 +214,8 @@ public class ScanActivity extends AppCompatActivity {
         } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
             try {
                 runOnUiThread(() -> Toast.makeText(ScanActivity.this, "Failed to connect to " + device.getName(), Toast.LENGTH_SHORT).show());
-            } catch (SecurityException e){
-                NavigationService.navigateToMainActivity(this);
+            } catch (SecurityException e) {
+                Log.d(tag, "블루투스 연결 실패");
             }
         }
     }
@@ -215,13 +232,13 @@ public class ScanActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         try {
-            if (PermissionHelper.hasBluetoothScanPermission(this)) {
+            if (PermissionHelper.hasAllBluetoothPermissions(this)) {
                 bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
             } else {
-                throw new SecurityException("Bluetooth scan permission not granted"); // 권한이 없으면 SecurityException을 던짐
+                throw new SecurityException("Bluetooth scan permission not granted");
             }
         } catch (SecurityException e) {
-            NavigationService.navigateToMainActivity(this); // 권한이 없으면 메인 액티비티로 이동
+            Log.d(tag, "액티비티 끌때");
         }
 
         // bluetoothGatt 객체가 null이 아닌 경우 close() 메서드 호출
@@ -229,8 +246,30 @@ public class ScanActivity extends AppCompatActivity {
             try {
                 bluetoothGatt.close();
                 bluetoothGatt = null;
-            } catch (SecurityException e){
+            } catch (SecurityException e) {
                 bluetoothGatt = null;
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PermissionHelper.REQUEST_BLUETOOTH_PERMISSIONS) {
+            boolean allGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (allGranted) {
+                // 모든 권한이 허용된 경우 스캔 시작 이동
+                startScanning();
+            } else {
+                // 권한이 거부된 경우 사용자에게 알림
+                Toast.makeText(this, "Bluetooth permissions are required to scan devices.", Toast.LENGTH_SHORT).show();
+                NavigationService.navigateToMainActivity(this);
             }
         }
     }

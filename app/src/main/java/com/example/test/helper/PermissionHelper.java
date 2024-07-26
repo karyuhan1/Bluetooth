@@ -4,21 +4,24 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class PermissionHelper {
-    public static final int REQUEST_BLUETOOTH_PERMISSIONS = 2;
+    public static final int REQUEST_BLUETOOTH_PERMISSIONS = 1;
 
     public interface PermissionCallback {
         void onPermissionsGranted();
         void onPermissionsDenied();
     }
 
+    // 필요한 모든 권한을 확인하고 요청하는 메서드
     public static void checkAndRequestPermissions(Activity activity, PermissionCallback callback) {
-        String[] permissions = getPermissionsBasedOnSDK();
+        String[] permissions = getRequiredPermissions();
         List<String> permissionsNeeded = getUngrantedPermissions(activity, permissions);
 
         if (permissionsNeeded.isEmpty()) {
@@ -28,7 +31,8 @@ public class PermissionHelper {
         }
     }
 
-    private static String[] getPermissionsBasedOnSDK() {
+    // SDK 버전에 따라 필요한 권한 반환
+    private static String[] getRequiredPermissions() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             return new String[]{
                     Manifest.permission.BLUETOOTH_CONNECT,
@@ -46,6 +50,7 @@ public class PermissionHelper {
         }
     }
 
+    // 부여되지 않은 권한 목록 반환
     private static List<String> getUngrantedPermissions(Activity activity, String[] permissions) {
         List<String> permissionsNeeded = new ArrayList<>();
         for (String permission : permissions) {
@@ -56,19 +61,14 @@ public class PermissionHelper {
         return permissionsNeeded;
     }
 
-    public static boolean hasBluetoothScanPermission(Context context) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            return ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+    // 모든 블루투스 관련 권한이 부여되었는지 확인
+    public static boolean hasAllBluetoothPermissions(Context context) {
+        String[] permissions = getRequiredPermissions();
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
         }
-        return true;  // SDK 31 이하에서는 BLUETOOTH_SCAN 권한이 필요하지 않음
-    }
-
-    public static boolean hasBluetoothConnectPermission(Context context) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            return ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
-        }
-        return true;  // SDK 31 이하에서는 BLUETOOTH_CONNECT 권한이 필요하지 않음
+        return true;
     }
 }
-
-
