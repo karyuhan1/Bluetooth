@@ -9,7 +9,6 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,7 +16,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.example.test.helper.DatabaseHelper;
 import com.example.test.helper.NavigationService;
 
 import org.tensorflow.lite.Interpreter;
@@ -39,7 +37,7 @@ public class ActualActivity extends AppCompatActivity {
     private BluetoothGatt bluetoothGatt;
     private Interpreter tflite;
     private TextView logTextView;
-    private DatabaseHelper dbHelper;
+    private String deviceMac;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,23 +45,20 @@ public class ActualActivity extends AppCompatActivity {
         setContentView(R.layout.activity_actual);
 
         logTextView = findViewById(R.id.log_text_view);
-        dbHelper = new DatabaseHelper(this);
 
-        // 데이터베이스에서 학습된 모델 불러오기
+        // Load the trained model
         try {
-            dbHelper.openDatabase();
-            String modelPath = getModelPathFromDatabase();
-            tflite = new Interpreter(loadModelFile(modelPath));
+            tflite = new Interpreter(loadModelFile());
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        // 인텐트에서 블루투스 기기 주소 가져오기
-        String deviceAddress = getIntent().getStringExtra("device_address");
+        // Get the Bluetooth device address from the intent
+        deviceMac = getIntent().getStringExtra("device_address");
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceAddress);
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceMac);
 
-        // 블루투스 기기 연결
+        // Connect to the Bluetooth device
         connectToDevice(device);
     }
 
@@ -95,7 +90,6 @@ public class ActualActivity extends AppCompatActivity {
                             if (service != null) {
                                 BluetoothGattCharacteristic characteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
                                 if (characteristic != null) {
-                                    // 데이터 처리 시작
                                     readCharacteristic(gatt, characteristic);
                                 }
                             }
@@ -106,7 +100,6 @@ public class ActualActivity extends AppCompatActivity {
                     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
                         if (status == BluetoothGatt.GATT_SUCCESS) {
                             byte[] data = characteristic.getValue();
-                            // 데이터를 처리하고 아두이노 센서를 제어
                             processSensorData(data);
                         }
                     }
@@ -134,7 +127,7 @@ public class ActualActivity extends AppCompatActivity {
     }
 
     private void processSensorData(byte[] data) {
-        // 데이터가 학습 데이터와 동일한 형식이라고 가정
+        // Assume the data is in the same format as the training data
         ByteBuffer inputBuffer = ByteBuffer.allocateDirect(data.length * 4).order(ByteOrder.nativeOrder());
         for (byte b : data) {
             inputBuffer.putFloat(b);
@@ -143,17 +136,17 @@ public class ActualActivity extends AppCompatActivity {
         float[][] output = new float[1][2];
         tflite.run(inputBuffer, output);
 
-        // 모델의 출력을 사용하여 아두이노 센서 제어
+        // Use the model's output to control the Arduino sensors
         controlArduinoSensors(output);
     }
 
     private void controlArduinoSensors(float[][] output) {
-        // 모델의 출력을 기반으로 아두이노 센서를 제어하는 로직 구현
-        // 예: 블루투스를 통해 아두이노에 출력 값을 전송
+        // Implement the logic to control Arduino sensors based on the model's output
+        // For example, you could send the output values to the Arduino over Bluetooth
         String command = "SENSOR_CONTROL:" + output[0][0] + "," + output[0][1];
         writeCharacteristic(command);
 
-        // 아두이노에 전송된 명령 로그 기록
+        // Log the command sent to Arduino
         runOnUiThread(() -> logTextView.append("Command sent: " + command + "\n"));
     }
 
@@ -174,18 +167,8 @@ public class ActualActivity extends AppCompatActivity {
         }
     }
 
-    private String getModelPathFromDatabase() {
-        String modelPath = null;
-        Cursor cursor = dbHelper.getReadableDatabase().rawQuery("SELECT model_name FROM tb_deep_learning ORDER BY created_at DESC LIMIT 1", null);
-        if (cursor.moveToFirst()) {
-            modelPath = cursor.getString(0);
-        }
-        cursor.close();
-        return modelPath;
-    }
-
-    private MappedByteBuffer loadModelFile(String modelPath) throws IOException {
-        File modelFile = new File(getFilesDir(), modelPath + ".tflite");
+    private MappedByteBuffer loadModelFile() throws IOException {
+        File modelFile = new File(getFilesDir(), "sensor_pair_model.tflite");
         FileInputStream inputStream = new FileInputStream(modelFile);
         FileChannel fileChannel = inputStream.getChannel();
         long startOffset = 0;
@@ -200,10 +183,11 @@ public class ActualActivity extends AppCompatActivity {
             try {
                 bluetoothGatt.close();
                 bluetoothGatt = null;
-            } catch (SecurityException e) {
+            }catch ( SecurityException e) {
                 bluetoothGatt.close();
                 bluetoothGatt = null;
             }
+
         }
     }
 }

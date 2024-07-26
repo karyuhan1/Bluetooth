@@ -1,9 +1,11 @@
 package com.example.test.helper;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteException;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,16 +93,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         super.close();
     }
 
-    public void insertSensingData(int deviceIdx, int middleFlexSensor, int middlePressureSensor, int ringFlexSensor,
+    public void insertSensingData(String deviceMac, int middleFlexSensor, int middlePressureSensor, int ringFlexSensor,
                                   int ringPressureSensor, int pinkyFlexSensor, int acceleration, int gyroscope,
-                                  int magneticField, String timestamp, int userIdx) {
+                                  int magneticField, String timestamp) {
         SQLiteDatabase db = this.getWritableDatabase();
-        String insertQuery = "INSERT INTO tb_sensing (device_idx, middle_flex_sensor, middle_pressure_sensor, ring_flex_sensor, " +
-                "ring_pressure_sensor, pinky_flex_sensor, acceleration, gyroscope, magnetic_field, timestamp, user_idx) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        db.execSQL(insertQuery, new Object[]{deviceIdx, middleFlexSensor, middlePressureSensor, ringFlexSensor,
+        String insertQuery = "INSERT INTO tb_sensing (device_mac, middle_flex_sensor, middle_pressure_sensor, ring_flex_sensor, " +
+                "ring_pressure_sensor, pinky_flex_sensor, acceleration, gyroscope, magnetic_field, timestamp) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        db.execSQL(insertQuery, new Object[]{deviceMac, middleFlexSensor, middlePressureSensor, ringFlexSensor,
                 ringPressureSensor, pinkyFlexSensor, acceleration, gyroscope,
-                magneticField, timestamp, userIdx});
+                magneticField, timestamp});
     }
 
     public void resetSensingData() {
@@ -109,10 +111,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("VACUUM");
     }
 
-    public void insertDeepLearningData(String modelName, String analysisResult, float predictionRate, long createdAt) {
+    public void insertDeepLearningData(String modelName, String sex, String deviceMac, String analysisResult, float predictionRate, long createdAt) {
         SQLiteDatabase db = this.getWritableDatabase();
-        String insertQuery = "INSERT INTO tb_deep_learning (model_name, analysis_result, prediction_rate, created_at) " +
-                "VALUES (?, ?, ?, ?)";
-        db.execSQL(insertQuery, new Object[]{modelName, analysisResult, predictionRate, createdAt});
+        String insertQuery = "INSERT INTO tb_deep_learning (model_name, sex, device_mac, analisys_result, prediction_rate, created_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+        db.execSQL(insertQuery, new Object[]{modelName, sex, deviceMac, analysisResult, predictionRate, createdAt});
     }
 }

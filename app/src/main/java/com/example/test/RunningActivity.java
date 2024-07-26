@@ -1,7 +1,5 @@
 package com.example.test;
 
-import static android.content.ContentValues.TAG;
-
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -27,10 +25,10 @@ import java.util.Date;
 import java.util.List;
 
 public class RunningActivity extends AppCompatActivity {
-    // DB에 저장된 센서 데이터를 토대로 학습을 실행하는 액티비티
-    // 여기부터는 아두이노랑 연동해야하는데 아직 아두이노가 미완성이라 대략적으로 만들었습니다.
+    //DB에 저장된 센서 데이터를 토대로 학습을 실행하는 액티비티
     private DatabaseHelper dbHelper;
     private Interpreter tflite;
+    private String deviceMac; // device_mac를 저장할 변수
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,8 +37,16 @@ public class RunningActivity extends AppCompatActivity {
 
         dbHelper = new DatabaseHelper(this);
 
-        dbHelper.openDatabase();
-        trainAndSaveModel();
+        Intent intent = getIntent();
+        deviceMac = intent.getStringExtra("device_address");
+
+        try {
+            dbHelper.createDatabase();
+            dbHelper.openDatabase();
+            trainAndSaveModel();
+        } catch (IOException e) {
+            throw new RuntimeException("Error creating database", e);
+        }
     }
 
     private void trainAndSaveModel() {
@@ -76,15 +82,15 @@ public class RunningActivity extends AppCompatActivity {
             float predictionRate = evaluateModel(output);
 
             // 학습 결과 저장
-            saveModel("Sensor Pair Model", "Analysis Result", predictionRate);
+            saveModel("Sensor Pair Model", "남", deviceMac, "Analysis Result", predictionRate);
         } catch (Exception e) {
-            Log.e(TAG, "Error during model training", e); // 예외 로깅
+            Log.e("RunningActivity", "Error during model training", e);
         }
     }
 
     private List<float[]> getSensingData() {
         List<float[]> dataList = new ArrayList<>();
-        Cursor cursor = dbHelper.getReadableDatabase().rawQuery("SELECT middleFlexSensor, middlePressureSensor, ringFlexSensor, ringPressureSensor, pinkyFlexSensor, acceleration, gyroscope, magneticField FROM tb_sensing", null);
+        Cursor cursor = dbHelper.getReadableDatabase().rawQuery("SELECT middle_flex_sensor, middle_pressure_sensor, ring_flex_sensor, ring_pressure_sensor, pinky_flex_sensor, acceleration, gyroscope, magnetic_field FROM tb_sensing WHERE device_mac = ?", new String[]{deviceMac});
         while (cursor.moveToNext()) {
             float[] data = new float[8];
             data[0] = cursor.getInt(0);
@@ -110,16 +116,16 @@ public class RunningActivity extends AppCompatActivity {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
-    private void saveModel(String modelName, String analysisResult, float predictionRate) {
+    private void saveModel(String modelName, String sex, String deviceMac, String analysisResult, float predictionRate) {
         long currentTime = new Date().getTime();
-        dbHelper.insertDeepLearningData(modelName, analysisResult, predictionRate, currentTime);
+        dbHelper.insertDeepLearningData(modelName, sex, deviceMac, analysisResult, predictionRate, currentTime);
 
         // 학습이 끝나면 센싱 테이블 초기화
         dbHelper.resetSensingData();
 
         // 학습이 끝나면 ActualActivity로 이동
         Intent intent = new Intent(RunningActivity.this, ActualActivity.class);
-        intent.putExtra("device_address", getIntent().getStringExtra("device_address"));
+        intent.putExtra("device_address", deviceMac);
         startActivity(intent);
         finish();
     }
