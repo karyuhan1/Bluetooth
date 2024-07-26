@@ -11,7 +11,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.Toast;
 import android.database.Cursor;
 
@@ -39,6 +41,7 @@ public class WorkActivity extends AppCompatActivity {
     private Handler handler;
     private Runnable runnable;
     private boolean isRecording = false;
+    private String selectedGender; // 선택된 성별을 저장할 변수
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -62,21 +65,30 @@ public class WorkActivity extends AppCompatActivity {
 
         connectToDevice(device);
 
+        Spinner genderSpinner = findViewById(R.id.gender_spinner);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.gender_array, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        genderSpinner.setAdapter(adapter);
+
         Button startButton = findViewById(R.id.start_button);
         Button resetButton = findViewById(R.id.reset_button);
 
         startButton.setOnClickListener(v -> {
+            selectedGender = genderSpinner.getSelectedItem().toString();
             if (!isRecording) {
                 startRecording();
-                startButton.setText("Stop");
+                startButton.setText(getString(R.string.stop));
             } else {
                 stopRecording();
-                startButton.setText("Start");
+                startButton.setText(getString(R.string.start));
             }
 
             // 학습 데이터 개수 확인 및 RunningActivity로 이동
             if (getSensingDataCount() > 6000) {
                 Intent runningIntent = new Intent(WorkActivity.this, RunningActivity.class);
+                runningIntent.putExtra("device_address", deviceMac);
+                runningIntent.putExtra("selected_gender", selectedGender);
                 startActivity(runningIntent);
             }
         });
@@ -193,11 +205,13 @@ public class WorkActivity extends AppCompatActivity {
                             int magneticField = (data[14] << 8) | (data[15] & 0xFF);
                             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
 
-                            dbHelper.insertSensingData(deviceMac, middleFlexSensor, middlePressureSensor, ringFlexSensor,
+                            dbHelper.insertSensingData(deviceMac, selectedGender, middleFlexSensor, middlePressureSensor, ringFlexSensor,
                                     ringPressureSensor, pinkyFlexSensor, acceleration, gyroscope, magneticField, timestamp);
 
                             if (getSensingDataCount() > 6000) {
                                 Intent runningIntent = new Intent(WorkActivity.this, RunningActivity.class);
+                                runningIntent.putExtra("device_address", deviceMac);
+                                runningIntent.putExtra("selected_gender", selectedGender);
                                 startActivity(runningIntent);
                             }
                         }

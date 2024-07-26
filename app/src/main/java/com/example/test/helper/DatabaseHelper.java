@@ -13,7 +13,7 @@ import java.io.OutputStream;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
-    private static final String DATABASE_NAME = "database.db";
+    private static final String DATABASE_NAME = "EXBR_DB.db";
     private static final int DATABASE_VERSION = 1;
     private static String DATABASE_PATH = "";
     private SQLiteDatabase myDatabase;
@@ -93,14 +93,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         super.close();
     }
 
-    public void insertSensingData(String deviceMac, int middleFlexSensor, int middlePressureSensor, int ringFlexSensor,
+    public void insertSensingData(String deviceMac, String sex, int middleFlexSensor, int middlePressureSensor, int ringFlexSensor,
                                   int ringPressureSensor, int pinkyFlexSensor, int acceleration, int gyroscope,
                                   int magneticField, String timestamp) {
         SQLiteDatabase db = this.getWritableDatabase();
-        String insertQuery = "INSERT INTO tb_sensing (device_mac, middle_flex_sensor, middle_pressure_sensor, ring_flex_sensor, " +
+        String insertQuery = "INSERT INTO tb_sensing (device_mac, sex, middle_flex_sensor, middle_pressure_sensor, ring_flex_sensor, " +
                 "ring_pressure_sensor, pinky_flex_sensor, acceleration, gyroscope, magnetic_field, timestamp) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        db.execSQL(insertQuery, new Object[]{deviceMac, middleFlexSensor, middlePressureSensor, ringFlexSensor,
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        db.execSQL(insertQuery, new Object[]{deviceMac, sex, middleFlexSensor, middlePressureSensor, ringFlexSensor,
                 ringPressureSensor, pinkyFlexSensor, acceleration, gyroscope,
                 magneticField, timestamp});
     }
@@ -113,8 +113,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public void insertDeepLearningData(String modelName, String sex, String deviceMac, String analysisResult, float predictionRate, long createdAt) {
         SQLiteDatabase db = this.getWritableDatabase();
-        String insertQuery = "INSERT INTO tb_deep_learning (model_name, sex, device_mac, analisys_result, prediction_rate, created_at) " +
+        String insertQuery = "INSERT INTO tb_deep_learning (model_name, sex, device_mac, analysis_result, prediction_rate, created_at) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
         db.execSQL(insertQuery, new Object[]{modelName, sex, deviceMac, analysisResult, predictionRate, createdAt});
+    }
+
+    public Cursor getModelForDevice(String deviceMac) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.rawQuery(
+                "SELECT model_name FROM tb_deep_learning WHERE device_mac = ? ORDER BY model_idx DESC LIMIT 1",
+                new String[]{deviceMac}
+        );
+    }
+
+    public boolean isDeviceInDeepLearning(String deviceMac) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT 1 FROM tb_deep_learning WHERE device_mac = ? LIMIT 1",
+                new String[]{deviceMac}
+        );
+        boolean exists = cursor.moveToFirst();
+        cursor.close();
+        return exists;
     }
 }

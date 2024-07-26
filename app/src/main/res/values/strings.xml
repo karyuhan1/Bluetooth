@@ -3,7 +3,13 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="scanning_ble">기기연결</string>
     <string name="start">학습시작</string>
-    <string name="reset">학습 초기화\n</string>
+    <string name="stop">학습중지</string>
+    <string name="reset">학습 초기화</string>
+    <string name="refresh">새로고침</string>
     <string name="logs_will_appear_here">Logs will appear here...</string>
     <string name="sensor_control_status">Sensor Control Status</string>
+    <string-array name="gender_array">
+        <item>남</item>
+        <item>여</item>
+    </string-array>
 </resources>
